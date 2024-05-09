@@ -1,0 +1,18 @@
+replicaCount: 1
+image:
+  repository: mysql
+  tag: latest
+service:
+  type: ClusterIP
+  port: 80
+
+services:
+- name: dev
+  replicaCount: 1
+  enabled: true
+- name: staging
+  replicaCount: 2
+  enabled: true
+- name: prod
+  replicaCount: 3
+  enabled: true

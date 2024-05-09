@@ -1,0 +1,35 @@
+{{- if .Values.services }}
+{{- range .Values.services }}
+{{- if .enabled }}
+---
+{{- $relname := $.Release.Name -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $.Release.Name }}-{{ .name }}-mysql
+  labels:
+{{ include "mylabels" (dict "relname" $relname "envname" .name) | indent 4 }}
+spec:
+  replicas: {{ .replicaCount }}
+  selector:
+    matchLabels:
+{{ include "mylabels" (dict "relname" $relname "envname" .name) | indent 6 }}
+  template:
+    metadata:
+      labels:
+{{ include "mylabels" (dict "relname" $relname "envname" .name) | indent 8 }}
+    spec:
+      containers:
+      - name: mysql
+        image: {{ $.Values.image.repository }}:{{ $.Values.image.tag }}
+        env:
+        - name: MYSQL_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ $.Release.Name }}-{{ .name }}-mysql-secret
+              key: password
+        ports:
+        - containerPort: {{ $.Values.service.port }}
+{{- end }}
+{{- end }}
+{{- end }}

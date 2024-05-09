@@ -1,145 +1,176 @@
-Nous déploierons un serveur web
+# TP: Exemple concret d'utilisation des structures de contrôle conditionnelles et itératives dans les templates Helm
 
-### Étape 1 : Installation de Helm
+Dans ce TP, nous allons utiliser Helm pour créer et déployer les bases de données MySQl pour environnements (dev, test, prod) sur Kubernetes. Nous allons générer un mot de passe par défaut en utilisant les fonctions et pipelines Helm, puis l'utiliser comme mot de passe pour nos bases de données MySQL. Nous allons également créer un secret Kubernetes pour stocker ce mot de passe et configurer le déploiement des bases de données pour utiliser ce mot de pass. Le but de ce TP est de montrer comment utiliser les structures de contrôle conditionnelles et itératives dans les templates Helm pour générer des ressources Kubernetes dynamiques en fonction des valeurs de configuration.
 
-Assure-toi d'avoir Helm installé sur ton système. Tu peux suivre les instructions d'installation officielles [ici](https://helm.sh/docs/intro/install/).
+**Étape 1 : Création du Chart Helm**
 
-### Étape 2 : Initialisation d'un nouveau projet Helm
+1. **Création du Chart Helm :**
 
-Commence par créer un nouveau projet Helm en utilisant la commande suivante :
+    Commencez par créer un nouveau chart Helm pour notre base de données MySQL.
 
-```bash
-helm create mon-projet-web
-```
+    ```bash
+    helm create mysql-db
+    ```
 
-### Étape 3 : Structure du répertoire
+2. **Configuration du Chart :**
 
-Voici la structure de répertoire recommandée pour ton projet :
+    Accédez au répertoire du chart nouvellement créé.
 
-```
-mon-projet-web/
-├── charts/
-├── templates/
-│   ├── deployment.yaml
-│   ├── service.yaml
-│   └── ingress.yaml
-├── values.yaml
-└── Chart.yaml
-```
+    ```bash
+    cd mysql-db
+    ```
 
-### Étape 4 : Configuration des valeurs
+    Supprimez le contenu du dossier `templates`.
 
-Modifie le fichier `values.yaml` pour définir les valeurs par défaut de ton déploiement. Voici un exemple de configuration :
+    ```bash
+    rm -rf templates/*
+    ```
 
-```yaml
-# values.yaml
-replicaCount: 1
-image:
-  repository: nginx
-  tag: stable
-  pullPolicy: IfNotPresent
-service:
-  type: ClusterIP
-  port: 80
-ingress:
-  enabled: false
-```
+**Étape 2 : Configuration des Templates**
 
-### Étape 5 : Définition du Chart
+1. **Créons les fichiers de configuration pour les environnements dev, test et prod :**
 
-Édite le fichier `Chart.yaml` pour définir les métadonnées de ta charte :
+    Créez un fichier `values.yaml` dans le dossier `mysql-db` avec le contenu suivant :
 
-```yaml
-# Chart.yaml
-apiVersion: v2
-name: mon-projet-web
-description: Helm chart pour le déploiement d'un serveur web
-version: 0.1.0
-```
+    ```yaml
+    replicaCount: 1
+    image:
+      repository: mysql
+      tag: latest
+    service:
+      type: ClusterIP
+      port: 80
 
-### Étape 6 : Création des modèles
+    services:
+      - name: dev
+        replicaCount: 1
+        enabled: true
+      - name: staging
+        replicaCount: 2
+        enabled: true
+      - name: prod
+        replicaCount: 3
+        enabled: true
+    ```
 
-Crée les modèles Kubernetes dans le répertoire `templates/` pour le déploiement, le service et éventuellement l'ingress. Voici des exemples :
+    Ce fichier définit les valeurs par défaut pour notre chart Helm, y compris le nombre de réplicas, l'image Docker à utiliser, le type de service Kubernetes, le port du service, et les environnements dev, test et prod avec leur nombre de réplicas respectifs.
+  
 
-#### `templates/deployment.yaml`
+2. **Création du Secret Kubernetes :**
 
-```yaml
-# templates/deployment.yaml
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: {{ include "mon-projet-web.fullname" . }}
-spec:
-  replicas: {{ .Values.replicaCount }}
-  selector:
-    matchLabels:
-      app: {{ include "mon-projet-web.name" . }}
-  template:
+    Créez un fichier `secret.yaml` dans le dossier `templates` avec le contenu suivant :
+
+    ```yaml
+    {{- if .Values.services }}
+    {{- range .Values.services }}
+    {{- if .enabled }}
+    ---
+    apiVersion: v1
+    kind: Secret
     metadata:
+      name: {{ $.Release.Name }}-{{ .name }}-mysql-secret
       labels:
-        app: {{ include "mon-projet-web.name" . }}
+        app: {{ $.Release.Name }}-{{ .name }}-mysql-secret
+    type: Opaque
+    data:
+      password: {{ randAlphaNum 16 | b64enc | quote }}
+    {{- end }}
+    {{- end }}
+    {{- end }}
+    ```
+
+    Ce fichier crée un secret Kubernetes avec un mot de passe généré aléatoirement de 16 caractères pour chaque environnement activé.
+
+3. **Création du Déploiement MySQL :**
+
+    Créez un fichier `deployment.yaml` dans le dossier `templates` avec le contenu suivant :
+
+    ```yaml
+    {{- if .Values.services }}
+    {{- range .Values.services }}
+    {{- if .enabled }}
+    ---
+    apiVersion: apps/v1
+    kind: Deployment
+    metadata:
+      name: {{ $.Release.Name }}-{{ .name }}-mysql
+      labels:
+        app: {{ $.Release.Name }}-{{ .name }}-mysql
     spec:
-      containers:
-        - name: {{ .Chart.Name }}
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
-          ports:
-            - containerPort: {{ .Values.service.port }}
-```
+      replicas: {{ .replicaCount }}
+      selector:
+        matchLabels:
+          app: {{ $.Release.Name }}-{{ .name }}-mysql
+      template:
+        metadata:
+          labels:
+            app: {{ $.Release.Name }}-{{ .name }}-mysql
+        spec:
+          containers:
+            - name: mysql
+              image: {{ $.Values.image.repository }}:{{ $.Values.image.tag }}
+              env:
+                - name: MYSQL_ROOT_PASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ $.Release.Name }}-{{ .name }}-mysql-secret
+                      key: password
+              ports:
+                - containerPort: {{ $.Values.service.port }}
+    {{- end }}
+    {{- end }}
+    {{- end }}
+    ```
 
-#### `templates/service.yaml`
+    Ce fichier crée un déploiement Kubernetes pour MySQL avec le nombre de réplicas spécifié pour chaque environnement activé. Il récupère le mot de passe du secret Kubernetes correspondant pour chaque environnement.
 
-```yaml
-# templates/service.yaml
-apiVersion: v1
-kind: Service
-metadata:
-  name: {{ include "mon-projet-web.fullname" . }}
-spec:
-  selector:
-    app: {{ include "mon-projet-web.name" . }}
-  ports:
-    - port: {{ .Values.service.port }}
-      targetPort: {{ .Values.service.port }}
-```
+4. **Création du Service MySQL :**
 
-#### `templates/ingress.yaml` (si nécessaire)
+    Créez un fichier `service.yaml` dans le dossier `templates` avec le contenu suivant :
 
-```yaml
-# templates/ingress.yaml
-{{- if .Values.ingress.enabled }}
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: {{ include "mon-projet-web.fullname" . }}
-spec:
-  rules:
-    - host: {{ .Values.ingress.host }}
-      http:
-        paths:
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: {{ include "mon-projet-web.fullname" . }}
-                port:
-                  number: {{ .Values.service.port }}
-{{- end }}
-```
+    ```yaml
+    {{- if .Values.services }}
+    {{- range .Values.services }}
+    {{- if .enabled }}
+    ---
+    apiVersion: v1
+    kind: Service
+    metadata:
+      name: {{ $.Release.Name }}-{{ .name }}-mysql
+      labels:
+        app: {{ $.Release.Name }}-{{ .name }}-mysql
+    spec:
+      type: {{ $.Values.service.type }}
+      ports:
+        - port: {{ $.Values.service.port }}
+          targetPort: {{ $.Values.service.port }}
+      selector:
+        app: {{ $.Release.Name }}-{{ .name }}-mysql
+    {{- end }}
+    {{- end }}
+    {{- end }}
+    ```
 
-### Étape 7 : Installation du Chart
+    Ce fichier crée un service Kubernetes pour MySQL avec le type de service et le port spécifiés pour chaque environnement activé.
 
-Utilise la commande suivante pour installer ta charte Helm :
+**Étape 3 : Installation du Chart Helm**
 
-```bash
-helm install mon-deploiement ./mon-projet-web
-```
+1. **Installation du Chart :**
 
-### Étape 8 : Vérification du déploiement
+    Installez le chart Helm en utilisant la commande suivante :
 
-Vérifie que le déploiement a réussi en utilisant les commandes Kubernetes standard, comme `kubectl get pods`, `kubectl get services`, etc.
+    ```bash
+    helm install mysql-db .
+    ```
 
-### Étape 9 : Personnalisation
+2. **Vérification de l'Installation :**
 
-N'hésite pas à personnaliser davantage ta charte en fonction de tes besoins spécifiques. Tu peux modifier les valeurs dans `values.yaml` ou ajouter de nouveaux modèles dans `templates/`.
+    Vérifiez que les déploiements et services MySQL ont été créés pour les environnements dev, test et prod en utilisant la commande suivante :
 
-Voilà ! Tu as maintenant créé avec succès une charte Helm pour le déploiement d'un serveur web complet, en suivant les meilleures pratiques de DevOps. Cette charte est réutilisable et facile à maintenir, ce qui te permettra de déployer rapidement des applications web dans ton cluster Kubernetes.
+    ```bash
+    kubectl get deployments,services
+    ```
+
+    Vous devriez voir les déploiements et services MySQL pour chaque environnement avec les réplicas et les ports correspondants.
+
+Ce TP a montré comment utiliser les structures de contrôle conditionnelles et itératives dans les templates Helm pour générer des ressources Kubernetes dynamiques en fonction des valeurs de configuration. Vous pouvez maintenant personnaliser et étendre ce chart Helm pour répondre à vos besoins spécifiques en matière de déploiement de bases de données MySQL sur Kubernetes.

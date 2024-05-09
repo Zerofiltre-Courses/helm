@@ -1,0 +1,38 @@
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-solidinvoice
+  labels:
+    app: {{ .Release.Name }}-solidinvoice
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}-solidinvoice
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}-solidinvoice
+    spec:
+      containers:
+      - name: solidinvoice
+        image: solidinvoice/solidinvoice:2.1.2
+        ports:
+        - containerPort: 80
+        resources:
+          requests:
+            memory: "100Mi"
+            cpu: "250m"
+          limits:
+            memory: "200Mi"
+            cpu: "500m"
+        volumeMounts:
+        - name: solidinvoice-secret-volume
+          mountPath: /opt/srv/config/env.php
+          subPath: env.php
+      volumes: 
+      - name: solidinvoice-secret-volume
+        secret:
+          secretName: {{ .Release.Name }}-solidinvoice

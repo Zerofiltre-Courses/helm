@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mon-apache
+  namespace: mon-apache
+  labels:
+    app: mon-apache
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mon-apache
+  template:
+    metadata:
+      labels:
+        app: mon-apache
+    spec:
+      containers:
+      - name: mon-apache
+        image: httpd:2.4
+        ports:
+        - containerPort: 80
