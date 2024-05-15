@@ -124,7 +124,8 @@ serviceType: ClusterIP
     Installez votre chart sur votre cluster Kubernetes en utilisant la commande suivante :
 
     ```bash
-    helm install mysql-db .
+    kubectl create namespace mysql-db
+    helm install mysql-db -n mysql-db .
     ```
 
 2. **Vérification de l'Installation :**
@@ -132,21 +133,27 @@ serviceType: ClusterIP
     Vérifiez que votre chart a été installé avec succès.
 
     ```bash
-    helm list
+    helm list -n mysql-db
     ```
+
+    Nous pouvons égalemnt vérifier le status du déploieent et le contenu de la clé mot de passe du secret.
+
+    ```bash
+    kubectl get all -n mysql-db
+    kubectl get secret mysql-db-mysql-secret -n mysql-db -o jsonpath="{.data.password}" 
+    ```
+
+    Vous dévririez voir le status du pod de la base de données MySQL en `RUNNING` et le mot de passe généré.
+
+    //TODO:Ajoutez phpMyAdmin pour vérifier la connexion à la base de données MySQL.
 
 3. **Nettoyage :**
 
     N'oubliez pas de désinstaller votre chart pour libérer les ressources.
 
     ```bash
-    helm uninstall mysql-db
-    ```
-
-    Vérifiez que votre chart a été désinstallé avec succès.
-
-    ```bash
-    helm list
+    helm uninstall mysql-db -n mysql-db
+    kubectl delete namespace mysql-db
     ```
 
 **Conclusion :**
