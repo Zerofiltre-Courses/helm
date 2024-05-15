@@ -104,13 +104,19 @@ Dans ce projet, nous allons améliorer notre chart Helm pour rendre son déploie
     Pour installer votre chart sur votre cluster Kubernetes, exécutez la commande suivante :
 
     ```bash
-    helm install mon-apache-flexible .
+    helm install -n mon-apache-flexible mon-apache-flexible .
     ```
 
     Vérifiez que votre chart a été installé avec succès.
 
     ```bash
-    helm list
+    helm list -n mon-apache-flexible
+    ```
+
+    Vous pouvez également vérifier que le déploiement et le service ont été créés avec succès. Avec un port-forwarding.
+
+    ```bash
+    kubectl -n mon-apache-flexible port-forward svc/mon-apache-flexible-apache 8080:80
     ```
 
     Vous devriez voir votre chart dans la liste des charts installés, avec le statut `DEPLOYED`.
@@ -120,13 +126,14 @@ Dans ce projet, nous allons améliorer notre chart Helm pour rendre son déploie
     N'oubliez pas de désinstallez votre chart pour liberer les ressources, utilisez la commande suivante :
 
     ```bash
-    helm uninstall mon-apache-flexible
+    helm uninstall mon-apache-flexible -n mon-apache-flexible
+    kubectl delete ns mon-apache-flexible
     ```
 
     Vous pouvez vérifiez que votre chart a été désinstallé avec succès avec la commande list
 
     ```bash
-    helm list
+    helm list -n mon-apache-flexible
     ```
 
 #### Conclusion :
