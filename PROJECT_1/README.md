@@ -35,24 +35,19 @@ Dans ce TP, nous allons créer un chart helm pour installer notre serveur Apache
 
     Pour mieux organiser notre chart, nous allons créer un namespace pour notre deployment.
 
-    Créez un fichier `namespace.yaml` dans le dossier `templates` et ajoutez le contenu suivant :
+    Premièrmeent, nous allons créer un namespace pour notre chart dans lequel nous allons déployer notre application Apache.
 
-    ```yaml
-    apiVersion: v1
-    kind: Namespace
-    metadata:
-      name: mon-apache
+    ```bash
+    kubectl create ns mon-apache
     ```
 
-
-    Ensuite, créez un fichier `deployment.yaml` toujours dans le dossier `templates` et ajoutez le contenu suivant :
+    Créez ensuite un fichier `deployment.yaml` toujours dans le dossier `templates` et ajoutez le contenu suivant :
 
     ```yaml
     apiVersion: apps/v1
     kind: Deployment
     metadata:
       name: mon-apache
-      namespace: mon-apache
       labels:
         app: mon-apache
     spec:
@@ -104,13 +99,13 @@ Dans ce TP, nous allons créer un chart helm pour installer notre serveur Apache
     Puis éxecutez la commande suivant pour installer votre chart sur votre cluster Kubernetes.
 
     ```bash
-    helm install mon-apache .
+    helm install -n mon-apache mon-apache .
     ```
 
     Vérifiez que votre chart a été installé avec succès.
 
     ```bash
-    helm list
+    helm list -n mon-apache
     ```
 
     Vous devriez voir votre chart dans la liste des charts installés. Avec le statut `DEPLOYED`.
@@ -118,9 +113,9 @@ Dans ce TP, nous allons créer un chart helm pour installer notre serveur Apache
     Vérifiez que votre application Apache est en cours d'exécution en accédant à l'adresse IP du service exposé sur le port 80.
 
     ```bash
-    kubectl get svc
+    kubectl get svc -n mon-apache
     ```
-
+    
     Utilisez le port-forwarding pour accéder à votre application via un navigateur web.
 
     ```bash
@@ -132,29 +127,13 @@ Dans ce TP, nous allons créer un chart helm pour installer notre serveur Apache
 
 5. **Nettoyage :**
 
-    Pour désinstaller votre chart, éxecutez la commande suivante :
+    Pour désinstaller votre chart et supprimer le namespace, éxecutez la commande suivante :
 
     ```bash
-    helm uninstall mon-apache
+    helm uninstall mon-apache -n mon-apache
+    kubectl delete ns mon-apache
     ```
 
-    Vérifiez que votre chart a été désinstallé avec succès.
-
-    ```bash
-    helm list
-    ```
-
-    Vérifiez que votre application Apache a été désinstallée avec succès.
-
-    ```bash
-    kubectl get svc
-    ```
-
-    Vérifiez que votre namespace a été supprimé.
-
-    ```bash
-    kubectl get ns
-    ```
-
+   
 
 Bravo! Vous venez de créer votre première chart Helm.

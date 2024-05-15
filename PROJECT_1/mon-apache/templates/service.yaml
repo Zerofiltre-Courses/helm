@@ -2,7 +2,6 @@ apiVersion: v1
 kind: Service
 metadata:
   name: mon-apache
-  namespace: mon-apache
   labels:
     app: mon-apache
 spec:
