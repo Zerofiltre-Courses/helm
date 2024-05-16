@@ -160,7 +160,8 @@ Dans ce TP, nous allons utiliser Helm pour créer et déployer les bases de donn
     Installez le chart Helm en utilisant la commande suivante :
 
     ```bash
-    helm install mysql-db .
+    kubectl create ns mysql-db
+    helm install mysql-db . -n mysql-db
     ```
 
 2. **Vérification de l'Installation :**
@@ -168,9 +169,20 @@ Dans ce TP, nous allons utiliser Helm pour créer et déployer les bases de donn
     Vérifiez que les déploiements et services MySQL ont été créés pour les environnements dev, test et prod en utilisant la commande suivante :
 
     ```bash
-    kubectl get deployments,services
+    kubectl get deployments,services -n mysql-db
     ```
 
     Vous devriez voir les déploiements et services MySQL pour chaque environnement avec les réplicas et les ports correspondants.
+
+**Étape 4 : Nettoyage**
+
+1. **Désinstallation du Chart :**
+
+    Désinstallez le chart Helm en utilisant la commande suivante :
+
+    ```bash
+    helm uninstall mysql-db -n mysql-db
+    kubectl delete ns mysql-db
+    ```
 
 Ce TP a montré comment utiliser les structures de contrôle conditionnelles et itératives dans les templates Helm pour générer des ressources Kubernetes dynamiques en fonction des valeurs de configuration. Vous pouvez maintenant personnaliser et étendre ce chart Helm pour répondre à vos besoins spécifiques en matière de déploiement de bases de données MySQL sur Kubernetes.
