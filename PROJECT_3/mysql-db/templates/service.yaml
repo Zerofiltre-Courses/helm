@@ -8,6 +8,10 @@ spec:
   ports:
   - port: {{ .Values.servicePort | default 3306 }}
     targetPort: {{ .Values.containerPort | default 3306 }}
+    name: mysql
+  - port: 8080
+    targetPort: 80
+    name: phpmyadmin
   selector:
     app: {{ .Release.Name }}-mysql
   type: {{ .Values.serviceType | default "ClusterIP" }}

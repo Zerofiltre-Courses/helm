@@ -30,6 +30,17 @@ spec:
               key: password
         ports:
         - containerPort: {{ $.Values.service.port }}
+
+      - name: phpmyadmin
+        image: phpmyadmin
+        ports:
+        - containerPort: 80
+        env:
+        - name: PMA_HOST
+          value: {{ $.Release.Name }}-{{ .name }}-mysql
+        - name: PMA_PORT
+          value: {{ $.Values.containerPort | default 3306 | quote }}
+          
 {{- end }}
 {{- end }}
 {{- end }}

@@ -25,3 +25,13 @@ spec:
               key: password
         ports:
         - containerPort: {{ .Values.containerPort | default 3306 }}
+      
+      - name: phpmyadmin
+        image: phpmyadmin
+        ports:
+        - containerPort: 80
+        env:
+        - name: PMA_HOST
+          value: {{ .Release.Name }}-mysql-service
+        - name: PMA_PORT
+          value: {{ .Values.containerPort | default 3306 | quote }}

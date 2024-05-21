@@ -1,0 +1,15 @@
+Merci d'avoir installé {{ .Chart.Name }}.
+
+Le nom de votre déploiement est {{ .Release.Name }}.
+
+Pour vous connecter à phpmyadmin,
+
+Faites un port-forwarding du service
+
+kubectl port-forward svc/{{ .Release.Name }}-prod-mysql 8080:8080 -n mysql-db
+
+Puis connectez en utilisant les informations ci-dessous:
+
+username: root
+password: password: $(kubectl get secret {{ .Release.Name }}-prod-mysql-secret -o jsonpath="{.data.password}" | base64 --decode)
+

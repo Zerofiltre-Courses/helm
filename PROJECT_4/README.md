@@ -65,12 +65,13 @@ Dans ce TP, nous allons utiliser Helm pour créer et déployer les bases de donn
     {{- range .Values.services }}
     {{- if .enabled }}
     ---
+    {{- $relname := $.Release.Name -}}
     apiVersion: v1
     kind: Secret
     metadata:
       name: {{ $.Release.Name }}-{{ .name }}-mysql-secret
       labels:
-        app: {{ $.Release.Name }}-{{ .name }}-mysql-secret
+    {{ include "mylabels" (dict "relname" $relname "envname" .name) | indent 4 }}
     type: Opaque
     data:
       password: {{ randAlphaNum 16 | b64enc | quote }}
@@ -90,33 +91,45 @@ Dans ce TP, nous allons utiliser Helm pour créer et déployer les bases de donn
     {{- range .Values.services }}
     {{- if .enabled }}
     ---
+    {{- $relname := $.Release.Name -}}
     apiVersion: apps/v1
     kind: Deployment
     metadata:
       name: {{ $.Release.Name }}-{{ .name }}-mysql
       labels:
-        app: {{ $.Release.Name }}-{{ .name }}-mysql
+    {{ include "mylabels" (dict "relname" $relname "envname" .name) | indent 4 }}
     spec:
       replicas: {{ .replicaCount }}
       selector:
         matchLabels:
-          app: {{ $.Release.Name }}-{{ .name }}-mysql
+    {{ include "mylabels" (dict "relname" $relname "envname" .name) | indent 6 }}
       template:
         metadata:
           labels:
-            app: {{ $.Release.Name }}-{{ .name }}-mysql
+    {{ include "mylabels" (dict "relname" $relname "envname" .name) | indent 8 }}
         spec:
           containers:
-            - name: mysql
-              image: {{ $.Values.image.repository }}:{{ $.Values.image.tag }}
-              env:
-                - name: MYSQL_ROOT_PASSWORD
-                  valueFrom:
-                    secretKeyRef:
-                      name: {{ $.Release.Name }}-{{ .name }}-mysql-secret
-                      key: password
-              ports:
-                - containerPort: {{ $.Values.service.port }}
+          - name: mysql
+            image: {{ $.Values.image.repository }}:{{ $.Values.image.tag }}
+            env:
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $.Release.Name }}-{{ .name }}-mysql-secret
+                  key: password
+            ports:
+            - containerPort: {{ $.Values.service.port }}
+
+          - name: phpmyadmin
+            image: phpmyadmin
+            ports:
+            - containerPort: 80
+            env:
+            - name: PMA_HOST
+              value: {{ $.Release.Name }}-{{ .name }}-mysql
+            - name: PMA_PORT
+              value: {{ $.Values.containerPort | default 3306 | quote }}
+              
     {{- end }}
     {{- end }}
     {{- end }}
@@ -133,19 +146,24 @@ Dans ce TP, nous allons utiliser Helm pour créer et déployer les bases de donn
     {{- range .Values.services }}
     {{- if .enabled }}
     ---
+    {{- $relname := $.Release.Name -}}
     apiVersion: v1
     kind: Service
     metadata:
-      name: {{ $.Release.Name }}-{{ .name }}-mysql
+      name: {{ $relname }}-{{ .name }}-mysql
       labels:
-        app: {{ $.Release.Name }}-{{ .name }}-mysql
+    {{ include "mylabels" (dict "relname" $relname "envname" .name) | indent 4 }}
     spec:
       type: {{ $.Values.service.type }}
       ports:
         - port: {{ $.Values.service.port }}
           targetPort: {{ $.Values.service.port }}
+          name: mysql
+        - port: 8080
+          targetPort: 80
+          name: phpmyadmin
       selector:
-        app: {{ $.Release.Name }}-{{ .name }}-mysql
+    {{ include "mylabels"  (dict "relname" $relname "envname" .name) | indent 4 }}
     {{- end }}
     {{- end }}
     {{- end }}
@@ -173,6 +191,20 @@ Dans ce TP, nous allons utiliser Helm pour créer et déployer les bases de donn
     ```
 
     Vous devriez voir les déploiements et services MySQL pour chaque environnement avec les réplicas et les ports correspondants.
+
+    Pour tester si nous déploiement fonctionne correctement, nous allons nous connecter à la base de donnée de prod par exemple via phpmyadmin en utilsant le mot de passe généré
+
+    Faites un port-forward pour accéder à phpmyadmin.
+    ```bash
+    kubectl port-forward svc/mysql-db-prod-mysql 8080:8080 -n mysql-db
+    ```
+
+    Accédez à `http://localhost:8080` dans votre navigateur et connectez-vous avec les informations suivantes :
+
+    username: root
+    password: [mot de passe généré ci-dessus]
+
+    Puis cliquez sur connecter
 
 **Étape 4 : Nettoyage**
 

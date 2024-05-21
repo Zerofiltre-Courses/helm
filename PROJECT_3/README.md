@@ -78,6 +78,15 @@ Dans ce TP, nous allons utiliser Helm pour créer et déployer une base de donn�
                   key: password
             ports:
             - containerPort: {{ .Values.containerPort | default 3306 }}
+          - name: phpmyadmin
+            image: phpmyadmin
+            ports:
+            - containerPort: 80
+            env:
+            - name: PMA_HOST
+              value: {{ .Release.Name }}-mysql-service
+            - name: PMA_PORT
+              value: {{ .Values.containerPort | default 3306 | quote }}
     ```
 
     Ce fichier crée un déploiement Kubernetes pour MySQL en utilisant le mot de passe généré à partir du secret.
@@ -97,9 +106,14 @@ Dans ce TP, nous allons utiliser Helm pour créer et déployer une base de donn�
       ports:
       - port: {{ .Values.servicePort | default 3306 }}
         targetPort: {{ .Values.containerPort | default 3306 }}
+        name: mysql
+      - port: 8080
+        targetPort: 80
+        name: phpmyadmin
       selector:
         app: {{ .Release.Name }}-mysql
       type: {{ .Values.serviceType | default "ClusterIP" }}
+
     ```
 
 
@@ -145,7 +159,19 @@ serviceType: ClusterIP
 
     Vous dévririez voir le status du pod de la base de données MySQL en `RUNNING` et le mot de passe généré.
 
-    //TODO:Ajoutez phpMyAdmin pour vérifier la connexion à la base de données MySQL.
+    Nous allons nous connecter à la base de données MYSQL en utilisant le mot de passe généré via phpmyadmin.
+
+    Faites un port-forward pour accéder à phpmyadmin.
+    ```bash
+    kubectl port-forward svc/mysql-db-mysql-service 8080:8080 -n mysql-db
+    ```
+
+    Accédez à `http://localhost:8080` dans votre navigateur et connectez-vous avec les informations suivantes :
+
+    username: root
+    password: [mot de passe généré ci-dessus]
+
+    Puis cliquez sur connecter
 
 3. **Nettoyage :**
 
